@@ -93,8 +93,7 @@ function App() {
       }
 
       const response = await chrome.tabs.sendMessage(tab.id, {
-        action: type,
-        model
+        action: type
       })
 
       if (response.success) {
@@ -103,7 +102,7 @@ function App() {
         addLog(response.message || 'Automation failed to start', 'error')
       }
     } catch (err) {
-      addLog('Communication error with script', 'error')
+      addLog('Extension script not found. Please REFRESH the page.', 'error')
       console.error(err)
     } finally {
       setLoading(false)
@@ -113,7 +112,7 @@ function App() {
   return (
     <div className="container">
       <header className="header">
-        <h1>FLASH<span style={{ color: 'var(--primary)' }}> COURSE AI</span></h1>
+        <h1>HEMA<span style={{ color: 'var(--primary)' }}>.AI</span> Assistant</h1>
         <div className="nav-tabs">
           <div
             className={`nav-tab ${activeTab === 'solve' ? 'active' : ''}`}
@@ -157,22 +156,22 @@ function App() {
               <span className="section-label" style={{ margin: 0 }}>Course Automation</span>
             </div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: '12px' }}>
-              Automatically navigates through modules, clicks "Next", and marks content as complete.
+              Automatically navigates modules and plays videos at 5x speed using <strong>Model-Free Engine</strong>.
             </p>
-            <div style={{display: 'flex', gap: '8px'}}>
-              <button 
-                className="btn-primary" 
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                className="btn-primary"
                 onClick={() => handleAutomation('autoCourse')}
                 disabled={loading}
-                style={{flex: 2, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.2)'}}
+                style={{ flex: 2, background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.2)' }}
               >
                 {loading ? <div className="spinner" /> : null}
                 {loading ? 'Automating...' : 'Start Auto-Course'}
               </button>
-              <button 
-                className="btn-primary" 
+              <button
+                className="btn-primary"
                 onClick={() => handleAutomation('stop')}
-                style={{flex: 1, background: 'rgba(244, 63, 94, 0.2)', color: '#f43f5e', boxShadow: 'none', border: '1px solid rgba(244, 63, 94, 0.3)'}}
+                style={{ flex: 1, background: 'rgba(244, 63, 94, 0.2)', color: '#f43f5e', boxShadow: 'none', border: '1px solid rgba(244, 63, 94, 0.3)' }}
               >
                 Stop
               </button>
@@ -242,7 +241,7 @@ function App() {
       )}
 
       <footer className="footer">
-        Ollama Browser Automation Agent v1.0.0
+        HEMA.AI Course Automation Engine v2.1.0
       </footer>
     </div>
   )

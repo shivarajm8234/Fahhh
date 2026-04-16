@@ -17,21 +17,23 @@ function createVisualOverlay(message: string) {
       position: fixed;
       top: 20px;
       right: 20px;
-      padding: 12px 20px;
-      background: rgba(15, 23, 42, 0.9);
-      color: #818cf8;
-      border: 1px solid rgba(129, 140, 248, 0.4);
+      padding: 14px 24px;
+      background: rgba(10, 15, 25, 0.85);
+      color: #00f2ff;
+      border: 1px solid rgba(0, 242, 255, 0.4);
       border-radius: 12px;
-      font-family: 'Inter', sans-serif;
+      font-family: 'Outfit', 'Inter', sans-serif;
       font-size: 14px;
-      font-weight: 600;
+      font-weight: 700;
       z-index: 999999;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-      backdrop-filter: blur(8px);
-      transition: all 0.3s ease;
+      box-shadow: 0 0 20px rgba(0, 242, 255, 0.2), inset 0 0 10px rgba(0, 242, 255, 0.1);
+      backdrop-filter: blur(12px);
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     `;
     document.body.appendChild(overlay);
   }
@@ -43,15 +45,17 @@ function createVisualOverlay(message: string) {
     style.id = 'hema-ai-styles';
     style.innerHTML = `
       @keyframes hema-spin { to { transform: rotate(360deg); } }
+      @keyframes hema-pulse { 0% { opacity: 0.8; } 50% { opacity: 1; } 100% { opacity: 0.8; } }
       .hema-spinner { 
-        width: 14px; height: 14px; 
-        border: 2px solid rgba(129, 140, 248, 0.2); 
-        border-top-color: #818cf8; 
+        width: 16px; height: 16px; 
+        border: 2px solid rgba(0, 242, 255, 0.2); 
+        border-top-color: #00f2ff; 
         border-radius: 50%; 
         animation: hema-spin 0.8s linear infinite; 
       }
-      .hema-highlight-question { outline: 2px solid #818cf8 !important; outline-offset: 4px; border-radius: 4px; transition: outline 0.3s; }
-      .hema-highlight-option { outline: 2px solid #10b981 !important; outline-offset: 2px; border-radius: 4px; background: rgba(16, 185, 129, 0.1) !important; }
+      #hema-ai-overlay span { animation: hema-pulse 2s ease-in-out infinite; }
+      .hema-highlight-question { outline: 2px solid #00f2ff !important; outline-offset: 4px; box-shadow: 0 0 15px rgba(0, 242, 255, 0.4) !important; border-radius: 4px; transition: all 0.3s; }
+      .hema-highlight-option { outline: 2px solid #10b981 !important; outline-offset: 2px; border-radius: 4px; background: rgba(16, 185, 129, 0.1) !important; box-shadow: 0 0 10px rgba(16, 185, 129, 0.3) !important; }
     `;
     document.head.appendChild(style);
   }
@@ -66,6 +70,15 @@ function removeOverlay(delay = 2000) {
       setTimeout(() => overlay.remove(), 300);
     }, delay);
   }
+}
+
+function showFlashMessage(msg: string, type: 'error' | 'info' | 'success' = 'info') {
+  const colors = {
+    error: '#ff4444',
+    info: '#00f2ff',
+    success: '#10b981'
+  };
+  createVisualOverlay(`<span style="color: ${colors[type]}">${msg}</span>`);
 }
 
 async function scrapeDetailedQuizData(): Promise<QuizContext | null> {
@@ -216,57 +229,177 @@ Respond ONLY with the exact text of the correct option. No explanation, no label
 }
 
 async function startCourseAutomation() {
-  createVisualOverlay('📡 URL Navigation Active');
+  createVisualOverlay('📡 Course Automation Active');
   (window as any).__hema_active = true;
+  let errorCount = 0;
+
+  const findNextButton = (): HTMLElement | null => {
+    // Collect all potential buttons and links
+    const targets = Array.from(document.querySelectorAll('a, button, [role="button"], .mat-button, .mat-raised-button')) as HTMLElement[];
+    
+    // Springboard/Wingspan specific logic:
+    // They often use mat-icon-button with "navigate_next" or similar
+    const priorityKeywords = /complete|mark as done|finish|done|success|verify|check|mark as read/i;
+    const generalKeywords = /next|continue|advance|got it|proceed|skip|right arrow|navigate_next/i;
+    
+    const visibleTargets = targets.filter(t => {
+      const rect = t.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0 && window.getComputedStyle(t).display !== 'none';
+    });
+    
+    // 1. Check for specific "Complete" actions
+    let found = visibleTargets.find(el => {
+      const txt = (el.innerText || '').trim();
+      const aria = el.getAttribute('aria-label') || '';
+      const title = el.getAttribute('title') || '';
+      return priorityKeywords.test(txt + aria + title) && (txt + aria + title).length < 60;
+    });
+
+    // 2. Check for "Next" logic
+    if (!found) {
+      found = visibleTargets.find(el => {
+        const txt = (el.innerText || '').trim();
+        const aria = el.getAttribute('aria-label') || '';
+        const title = el.getAttribute('title') || '';
+        // Look for common icons or class names if text is empty
+        const hasNextIcon = el.querySelector('.material-icons')?.innerHTML.includes('next') || 
+                          el.className.includes('next') || 
+                          el.id.includes('next');
+        
+        return (generalKeywords.test(txt + aria + title) || hasNextIcon) && (txt + aria + title).length < 60;
+      });
+    }
+
+    return (found as HTMLElement) || null;
+  };
+
+  const hasTextContent = (): boolean => {
+    // Filter out scripts and styles to get real content
+    const clone = document.body.cloneNode(true) as HTMLElement;
+    const toRemove = clone.querySelectorAll('script, style, #hema-ai-overlay');
+    toRemove.forEach(r => r.remove());
+    const content = clone.innerText.trim();
+    return content.length > 500;
+  };
 
   const runTick = async () => {
     if (!(window as any).__hema_active) return;
 
-    // 1. Handle Videos (Speed up to 10x)
-    document.querySelectorAll('video').forEach(v => {
-      v.playbackRate = 10.0;
-      if (v.paused && !v.ended) { v.muted = true; v.play().catch(() => { }); }
-      if (v.duration && v.currentTime > v.duration - 1.2) v.currentTime = v.duration;
-    });
+    const videos = Array.from(document.querySelectorAll('video'));
+    const nextBtn = findNextButton();
 
-    // 2. URL Strategy: Try to find a number to increment
-    const currentURL = window.location.href;
-    const urlParts = currentURL.split('/');
-    const lastPart = urlParts[urlParts.length - 1];
+    // --- CASE 1: VIDEOS PRESENT ---
+    if (videos.length > 0) {
+      let anyVideoWorking = false;
+      let allEnded = true;
 
-    if (/^\d+$/.test(lastPart)) {
-      const nextNum = parseInt(lastPart) + 1;
-      urlParts[urlParts.length - 1] = nextNum.toString();
-      const nextURL = urlParts.join('/');
+      for (const v of videos) {
+        // 1. Handle errors (403 Forbidden, manifest errors)
+        if (v.error || (v.networkState === 3)) { // networkState 3 = NETWORK_NO_SOURCE
+          errorCount++;
+          if (errorCount > 10) { // Persistent failure
+            showFlashMessage('🚨 403 / Network Error. AUTO-REFRESHING...', 'error');
+            setTimeout(() => window.location.reload(), 2000);
+            return;
+          }
+          continue;
+        }
 
-      createVisualOverlay(`🚀 Navigating to Step ${nextNum}...`);
-      window.location.href = nextURL;
+        // 2. Playback speed enforcement (Model-free 5x)
+        const targetRate = 5.0;
+        if (v.readyState >= 2) { // HAVE_CURRENT_DATA
+          if (Math.abs(v.playbackRate - targetRate) > 0.1 && !v.ended) {
+            try {
+              v.playbackRate = targetRate;
+              // Some players override playbackRate. We can try to lock it if needed, 
+              // but repeated setting is usually enough.
+            } catch (e) {
+              console.warn('HEMA: Playback rate lock failed');
+            }
+          }
+          
+          v.muted = true;
+          anyVideoWorking = true;
+
+          // 3. Auto-play logic
+          if (v.paused && !v.ended) {
+            v.play().catch(() => {
+              showFlashMessage('⏸️ Interaction Required. CLICK PAGE.', 'info');
+            });
+          }
+        } else {
+          showFlashMessage('⏳ Buffering / Loading Data...', 'info');
+          allEnded = false;
+        }
+
+        if (!v.ended) {
+          allEnded = false;
+        }
+      }
+
+      if (allEnded && videos.length > 0) {
+        showFlashMessage('✅ Task Finished. Advancing...', 'success');
+        const btn = findNextButton();
+        if (btn) {
+          btn.click();
+          setTimeout(runTick, 7000); // Wait for load
+        } else {
+          // Fallback: Try to find ANY button that looks like navigation
+          const fallback = document.querySelector('button[mat-icon-button], .next-btn') as HTMLElement;
+          if (fallback) fallback.click();
+          setTimeout(runTick, 5000);
+        }
+      } else {
+        if (anyVideoWorking) {
+          errorCount = 0; // Reset error count if something is playing
+          createVisualOverlay(`⚡ Speed Warp: 5.0x Active`);
+        }
+        setTimeout(runTick, 1000);
+      }
       return;
     }
 
-    // 3. Fallback: Find very specific "Next" links in a more targeted way
-    // (Less "Deep Scan", more "Specific Search")
-    const targets = Array.from(document.querySelectorAll('a, button')) as HTMLElement[];
-    const keywords = /next|continue|complete|success|advance/i;
+    // --- CASE 2: TEXT CONTENT ---
+    if (hasTextContent()) {
+      showFlashMessage('📄 Analyzing Content Assets...', 'info');
+      // Scroll in chunks to simulate reading more naturally
+      let scrolled = 0;
+      const step = document.body.scrollHeight / 5;
+      const interval = setInterval(() => {
+        scrolled += step;
+        window.scrollTo({ top: scrolled, behavior: 'smooth' });
+        if (scrolled >= document.body.scrollHeight) {
+          clearInterval(interval);
+          finishTextContent();
+        }
+      }, 500);
 
-    const nextBtn = targets.find(el => {
-      const text = (el.innerText || '').trim();
-      const aria = el.getAttribute('aria-label') || '';
-      return keywords.test(text + aria) && text.length < 20;
-    });
+      const finishTextContent = () => {
+        if (!(window as any).__hema_active) return;
+        showFlashMessage('🎯 Checkpoint Reached. Next Target...', 'success');
+        const btn = findNextButton();
+        if (btn) {
+          btn.click();
+          setTimeout(runTick, 7000);
+        } else {
+          setTimeout(runTick, 5000);
+        }
+      };
+      return;
+    }
 
+    // --- CASE 3: FALLBACK ---
     if (nextBtn) {
-      createVisualOverlay('🎯 Found Next (Targeted)');
+      showFlashMessage('⏭️ Module Empty. Skipping...', 'info');
       nextBtn.click();
-      setTimeout(runTick, 8000);
+      setTimeout(runTick, 7000);
     } else {
-      createVisualOverlay('🔍 Waiting for module change...');
-      setTimeout(runTick, 4000);
+      setTimeout(runTick, 5000);
     }
   };
 
   runTick();
-  return { success: true, message: 'URL Navigation mode active' };
+  return { success: true, message: 'Warp Engine Engaged (5x)' };
 }
 
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {

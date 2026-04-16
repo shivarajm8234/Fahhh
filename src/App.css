@@ -1,13 +1,14 @@
 :root {
-  --primary: #818cf8;
-  --primary-glow: rgba(129, 140, 248, 0.4);
-  --bg-dark: #0f172a;
-  --bg-card: rgba(30, 41, 59, 0.7);
-  --text-main: #f8fafc;
+  --primary: #00f2ff;
+  --primary-glow: rgba(0, 242, 255, 0.4);
+  --bg-dark: #0a0f19;
+  --bg-card: rgba(16, 24, 39, 0.8);
+  --text-main: #e2e8f0;
   --text-dim: #94a3b8;
   --success: #10b981;
-  --error: #f43f5e;
-  --border: rgba(255, 255, 255, 0.1);
+  --error: #ff4444;
+  --accent: #f472b6;
+  --border: rgba(0, 242, 255, 0.15);
 }
 
 * {
@@ -18,9 +19,12 @@ body {
   margin: 0;
   padding: 0;
   width: 360px;
-  min-height: 500px;
-  background: radial-gradient(circle at top right, #1e293b, #0f172a);
-  font-family: 'Inter', -apple-system, system-ui, sans-serif;
+  min-height: 520px;
+  background: #0a0f19;
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(0, 242, 255, 0.05) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(244, 114, 182, 0.05) 0px, transparent 50%);
+  font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
   color: var(--text-main);
 }
 
@@ -45,13 +49,15 @@ body {
 }
 
 .header h1 {
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   font-weight: 800;
   margin: 0;
-  background: linear-gradient(135deg, #a5b4fc 0%, #c084fc 100%);
+  background: linear-gradient(135deg, #00f2ff 0%, #a5b4fc 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  letter-spacing: -0.02em;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  filter: drop-shadow(0 0 8px rgba(0, 242, 255, 0.3));
 }
 
 .nav-tabs {
